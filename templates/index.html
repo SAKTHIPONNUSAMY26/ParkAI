@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkAI - Smart Parking</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <h1>ParkAI</h1>
+        <p>Multi-Agent Based Smart Parking Management System</p>
+    </div>
+    <div class="container">
+        <div class="cards">
+            <div class="card"><h3>Total Slots</h3><h2>{{ total_slots }}</h2><p>Parking Spaces</p></div>
+            <div class="card"><h3>Available</h3><h2>{{ available_slots }}</h2><p>Free Slots</p></div>
+            <div class="card"><h3>Occupied</h3><h2>{{ occupied_slots }}</h2><p>Currently Parked</p></div>
+        </div>
+        <section class="detection-panel" aria-live="polite">
+            <h2>Camera Detection</h2>
+            <div class="mode-controls" aria-label="Camera mode">
+                <button type="button" data-mode="entrance" onclick="setCameraMode('entrance')">Entrance mode</button>
+                <button type="button" data-mode="slots" onclick="setCameraMode('slots')">Parking / Slot mode</button>
+            </div>
+            <p id="mode-explanation" class="detection-explanation"></p>
+            <p id="vehicle-state" class="detection-state not-detected">Checking entrance camera...</p>
+            <div id="recommendation" hidden>
+                <p class="detection-details">Recommended Parking Slot</p>
+                <p id="recommended-slot" class="recommended-slot">-</p>
+                <p id="slot-status" class="detection-details">Status: Available</p>
+                <p id="recommendation-reason" class="detection-details"></p>
+                <p id="available-slots" class="detection-details"></p>
+            </div>
+            <p id="detection-message" class="detection-details"></p>
+            <img id="camera-feed" class="camera-feed" src="/video-feed" alt="YOLO camera feed">
+        </section>
+        {% if message %}<div class="message-box">{{ message }}</div>{% endif %}
+        <h2 class="parking-title">Parking Slots</h2>
+        <div class="slots">
+            {% for slot in parking_slots %}
+                {% if slot.status == "Available" %}
+                    <div class="slot available" data-slot-id="{{ slot.id }}" data-slot-status="Available">
+                        {{ slot.id }}
+                        <small>Available</small>
+                        <form action="/park" method="POST">
+                            <input type="hidden" name="slot_id" value="{{ slot.id }}">
+                            <button type="submit" class="park-btn">Park Vehicle</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="slot occupied" data-slot-id="{{ slot.id }}" data-slot-status="Occupied">
+                        {{ slot.id }}
+                        <small>Occupied</small>
+                        <form action="/exit" method="POST">
+                            <input type="hidden" name="slot_id" value="{{ slot.id }}">
+                            <button type="submit" class="exit-btn">Vehicle Exit</button>
+                        </form>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="button-area"><a href="/available"><button>Find Available Parking</button></a></div>
+    </div>
+    <script>
+        let activeMode = "entrance";
+
+        function setModeText(mode) {
+            activeMode = mode;
+            document.querySelectorAll("[data-mode]").forEach(button => {
+                button.classList.toggle("active-mode", button.dataset.mode === mode);
+            });
+            document.getElementById("mode-explanation").textContent = mode === "entrance"
+                ? "Entrance mode detects arriving vehicles and recommends the nearest available slot."
+                : "Parking / Slot mode detects vehicles in the configured slot regions and updates Occupied or Available status.";
+        }
+
+        async function setCameraMode(mode) {
+            const response = await fetch("/api/camera-mode", {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({mode})
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                document.getElementById("detection-message").textContent = data.error;
+                return;
+            }
+            setModeText(data.mode);
+            document.getElementById("camera-feed").src = "/video-feed?mode=" + Date.now();
+            updateVehicleStatus();
+        }
+
+        function refreshGridWhenOccupancyChanges(data) {
+            if (data.mode !== "slots") return;
+            const occupied = new Set(data.occupied_slots);
+            document.querySelectorAll("[data-slot-id]").forEach(card => {
+                const status = occupied.has(card.dataset.slotId) ? "Occupied" : "Available";
+                if (card.dataset.slotStatus === status) return;
+
+                card.dataset.slotStatus = status;
+                card.classList.toggle("available", status === "Available");
+                card.classList.toggle("occupied", status === "Occupied");
+                card.querySelector("small").textContent = status;
+
+                const form = card.querySelector("form");
+                const button = card.querySelector("button");
+                form.action = status === "Available" ? "/park" : "/exit";
+                button.className = status === "Available" ? "park-btn" : "exit-btn";
+                button.textContent = status === "Available" ? "Park Vehicle" : "Vehicle Exit";
+            });
+        }
+
+        async function updateVehicleStatus() {
+            const state = document.getElementById("vehicle-state");
+            const recommendation = document.getElementById("recommendation");
+            const slot = document.getElementById("recommended-slot");
+            const slotStatus = document.getElementById("slot-status");
+            const reason = document.getElementById("recommendation-reason");
+            const available = document.getElementById("available-slots");
+            const message = document.getElementById("detection-message");
+            const cameraFeed = document.getElementById("camera-feed");
+            try {
+                const response = await fetch("/api/vehicle-status");
+                const data = await response.json();
+                setModeText(data.mode);
+                recommendation.hidden = true;
+                message.textContent = "";
+                refreshGridWhenOccupancyChanges(data);
+                if (data.stopped) {
+                    cameraFeed.hidden = true;
+                    state.textContent = "Camera stopped";
+                    state.className = "detection-state not-detected";
+                    message.textContent = "Press an active mode button to restart the camera.";
+                } else if (data.error) {
+                    cameraFeed.hidden = true;
+                    state.textContent = "Camera unavailable";
+                    state.className = "detection-state detection-error";
+                    message.textContent = data.error;
+                } else if (data.mode === "slots") {
+                    cameraFeed.hidden = false;
+                    state.textContent = data.occupied_slots.length
+                        ? "Occupied slots: " + data.occupied_slots.join(", ")
+                        : "No configured slot currently occupied";
+                    state.className = "detection-state " + (data.occupied_slots.length ? "detected" : "not-detected");
+                    message.textContent = "Slot ROI monitoring is active.";
+                } else if (data.detected) {
+                    cameraFeed.hidden = false;
+                    state.textContent = "Vehicle Detected";
+                    state.className = "detection-state detected";
+                    message.textContent = "Vehicle Type: " + data.vehicles.join(", ");
+                    if (data.recommended_slot) {
+                        slot.textContent = data.recommended_slot;
+                        slotStatus.textContent = "Status: " + data.recommendation_status;
+                        reason.textContent = "Reason: " + data.recommendation_reason;
+                        available.textContent = "Available Slots: " + data.available_slots.join(", ");
+                        recommendation.hidden = false;
+                    } else {
+                        message.textContent = "Vehicle Detected - No Parking Slot Available";
+                    }
+                } else {
+                    cameraFeed.hidden = false;
+                    state.textContent = data.running ? "No Vehicle Detected" : "Starting entrance camera...";
+                    state.className = "detection-state not-detected";
+                }
+            } catch (error) {
+                cameraFeed.hidden = true;
+                state.textContent = "Vehicle detection service unavailable";
+                state.className = "detection-state detection-error";
+                message.textContent = "The parking dashboard is still available.";
+            }
+        }
+        document.addEventListener("keydown", async event => {
+            if (event.key.toLowerCase() !== "q" || event.repeat) return;
+            const response = await fetch("/api/camera-stop", {method: "POST"});
+            if (response.ok) updateVehicleStatus();
+        });
+        updateVehicleStatus();
+        setInterval(updateVehicleStatus, 2000);
+    </script>
+</body>
+</html>

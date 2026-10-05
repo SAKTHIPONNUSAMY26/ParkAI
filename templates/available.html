@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkAI - Available Parking</title>
+</head>
+<body>
+    <main>
+        <h1>&#128663; Available Parking Slots</h1>
+        {% if parking_slots %}
+            <ul>
+                {% for slot in parking_slots %}
+                    <li>{{ slot.id }} - {{ slot.status }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No parking slots are currently available.</p>
+        {% endif %}
+        <p><a href="/">Back to dashboard</a></p>
+    </main>
+</body>
+</html>

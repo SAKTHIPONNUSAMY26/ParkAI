@@ -1,0 +1,13 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Ultralytics runtime files and downloaded model weights
+Ultralytics/
+.ultralytics/
+weights/
+runs/
+yolo11n.pt
+
+# Local data generated during experiments
+datasets/

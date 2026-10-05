@@ -1,0 +1,133 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body { background: #f4f7fb; color: #222; }
+
+.header {
+    padding: 25px;
+    background: #1e3a8a;
+    color: white;
+    text-align: center;
+}
+
+.header h1 { margin-bottom: 8px; font-size: 32px; }
+.header p { font-size: 17px; }
+
+.container { width: 90%; max-width: 1000px; margin: 30px auto; }
+
+.cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+.card,
+.detection-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.card { width: 250px; padding: 25px; }
+.card h2 { margin-top: 10px; font-size: 32px; }
+.card p,
+.detection-details { margin-top: 8px; color: #555; }
+
+.detection-explanation {
+    max-width: 680px;
+    margin: 12px auto 0;
+    color: #374151;
+    line-height: 1.5;
+}
+
+/* Entrance-camera detection is separate from slot availability data. */
+.detection-panel { margin: 28px auto 0; padding: 24px; }
+.detection-panel h2 { margin-bottom: 12px; }
+.mode-controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.mode-controls button { border: 1px solid #1e3a8a; background: white; color: #1e3a8a; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+.mode-controls button.active-mode { background: #1e3a8a; color: white; }
+.detection-state { font-size: 18px; font-weight: bold; }
+.detected { color: #166534; }
+.not-detected { color: #4b5563; }
+.detection-error { color: #991b1b; }
+.recommended-slot { margin: 8px 0; color: #166534; font-size: 34px; }
+
+.camera-feed {
+    display: block;
+    width: min(100%, 640px);
+    min-height: 180px;
+    margin: 18px auto 0;
+    border-radius: 8px;
+    background: #111827;
+}
+
+.message-box {
+    max-width: 600px;
+    margin: 25px auto;
+    padding: 15px;
+    border-radius: 8px;
+    background: #e0f2fe;
+    color: #075985;
+    font-weight: bold;
+    text-align: center;
+}
+
+.parking-title { margin: 40px 0 20px; text-align: center; }
+
+.slots {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+}
+
+.slot {
+    padding: 25px;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.available { border: 2px solid #22c55e; background: #dcfce7; color: #166534; }
+.occupied { border: 2px solid #ef4444; background: #fee2e2; color: #991b1b; }
+.slot small { display: block; margin-top: 8px; font-size: 14px; }
+
+.park-btn,
+.exit-btn,
+.button-area button {
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.park-btn,
+.exit-btn {
+    margin-top: 12px;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.park-btn { background: #d97706; }
+.park-btn:hover { background: #b45309; }
+.exit-btn { background: #dc2626; }
+.exit-btn:hover { background: #b91c1c; }
+
+.button-area { margin-top: 35px; text-align: center; }
+.button-area button {
+    padding: 14px 30px;
+    border-radius: 8px;
+    background: #1e3a8a;
+    font-size: 16px;
+}
+.button-area button:hover { background: #162d6b; }
+
+@media (max-width: 700px) {
+    .slots { grid-template-columns: repeat(2, 1fr); }
+}
